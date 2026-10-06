@@ -1,5 +1,3 @@
-const STORAGE_KEY = "paper-todo-list";
-
 const weekdayNames = ["일", "월", "화", "수", "목", "금", "토"];
 const MONTH_CHIP_LIMIT = 3; // 달력 한 칸에 보여줄 할 일 개수 (넘으면 +N)
 
@@ -34,7 +32,7 @@ const els = {
 };
 
 const state = {
-  todos: loadTodos(),
+  todos: [], // 브라우저 저장소를 쓰지 않아서, 새로고침하면 목록이 초기화돼요
   view: "month",
   cursor: startOfDay(new Date()),
   selected: startOfDay(new Date()),
@@ -42,19 +40,6 @@ const state = {
   editId: null,
   filter: "all",
 };
-
-function loadTodos() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveTodos() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state.todos));
-}
 
 function startOfDay(date) {
   const d = new Date(date);
@@ -261,7 +246,6 @@ function completeTodo(id) {
   const todo = state.todos.find((t) => t.id === id);
   if (!todo) return;
   todo.done = true;
-  saveTodos();
   render();
 }
 
@@ -469,7 +453,6 @@ els.addDelete.addEventListener("click", () => {
     return;
   }
   state.todos = state.todos.filter((t) => t.id !== state.editId);
-  saveTodos();
   els.addModal.close();
   render();
 });
@@ -509,7 +492,6 @@ els.addForm.addEventListener("submit", (event) => {
         done: false,
       });
     }
-    saveTodos();
     if (!els.dayModal.open) {
       state.selected = startOfDay(due);
       state.cursor = startOfDay(due);
@@ -529,7 +511,6 @@ els.postponeForm.addEventListener("submit", (event) => {
   try {
     const due = readDateFromForm(els.postponeForm);
     todo.due = due.toISOString();
-    saveTodos();
     if (!els.dayModal.open) {
       state.selected = startOfDay(due);
       state.cursor = startOfDay(due);
