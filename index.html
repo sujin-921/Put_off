@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>오늘의 할 일</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Jua&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="paper" aria-hidden="true"></div>
+    <main class="page">
+      <header class="masthead">
+        <p class="masthead__mark">TO-DO</p>
+        <h1>할 일 노트</h1>
+      </header>
+
+      <section class="today" aria-labelledby="today-heading">
+        <div class="today__head">
+          <h2 id="today-heading">오늘의 할 일</h2>
+          <p class="today__date" id="today-date"></p>
+          <button class="btn btn--ink" type="button" id="add-todo-btn">
+            할 일 추가하기
+          </button>
+        </div>
+        <ul class="todo-list" id="today-list"></ul>
+        <p class="empty" id="today-empty" hidden>오늘 예정된 할 일이 없습니다.</p>
+      </section>
+
+      <section class="calendar" aria-label="달력">
+        <div class="calendar__head">
+          <div class="segmented" role="group" aria-label="달력 보기">
+            <button class="segmented__btn is-active" type="button" data-view="month">
+              Month
+            </button>
+            <button class="segmented__btn" type="button" data-view="week">Week</button>
+          </div>
+        </div>
+        <div class="calendar__nav">
+          <div class="calendar__nav-left">
+            <button class="btn btn--ghost" type="button" id="today-btn">오늘</button>
+          </div>
+          <div class="calendar__nav-center">
+            <button class="btn btn--ghost" type="button" id="prev-range" aria-label="이전">
+              ‹
+            </button>
+            <p class="calendar__label" id="range-label"></p>
+            <button class="btn btn--ghost" type="button" id="next-range" aria-label="다음">
+              ›
+            </button>
+          </div>
+          <div class="calendar__nav-right" aria-hidden="true"></div>
+        </div>
+        <div class="calendar__grid" id="calendar-grid"></div>
+      </section>
+
+      <section class="history" aria-labelledby="history-heading">
+        <div class="history__head">
+          <h2 id="history-heading">할 일 기록</h2>
+          <div class="segmented" role="group" aria-label="할 일 보기">
+            <button class="segmented__btn is-active" type="button" data-filter="all">
+              전체
+            </button>
+            <button class="segmented__btn" type="button" data-filter="todo">미완료</button>
+            <button class="segmented__btn" type="button" data-filter="done">완료</button>
+          </div>
+        </div>
+        <ul class="todo-list" id="history-list"></ul>
+        <p class="empty" id="history-empty" hidden></p>
+      </section>
+    </main>
+
+    <dialog class="modal modal--day" id="day-modal">
+      <div class="modal__form">
+        <h2 id="day-modal-title">선택한 날</h2>
+        <ul class="todo-list" id="day-list"></ul>
+        <p class="empty" id="day-empty" hidden>이 날의 할 일이 없습니다.</p>
+        <div class="modal__actions">
+          <button class="btn btn--ghost" type="button" id="day-close">닫기</button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog class="modal" id="add-modal">
+      <form method="dialog" class="modal__form" id="add-form">
+        <h2 id="add-modal-title">할 일 추가하기</h2>
+        <label>
+          제목
+          <input name="title" type="text" required maxlength="80" placeholder="무엇을 할까요?" />
+        </label>
+        <label>
+          상세정보
+          <textarea name="detail" rows="4" maxlength="400" placeholder="메모를 남겨 두세요."></textarea>
+        </label>
+        <fieldset class="date-fields">
+          <legend>날짜</legend>
+          <label>
+            년도
+            <input name="year" type="number" min="2000" max="2100" required />
+          </label>
+          <label>
+            월
+            <input name="month" type="number" min="1" max="12" required />
+          </label>
+          <label>
+            일
+            <input name="day" type="number" min="1" max="31" required />
+          </label>
+          <label>
+            시간
+            <input name="time" type="time" required />
+          </label>
+        </fieldset>
+        <div class="modal__actions">
+          <button class="btn btn--danger" type="button" id="add-delete" hidden>삭제</button>
+          <button class="btn btn--ghost" type="button" value="cancel" id="add-cancel">
+            닫기
+          </button>
+          <button class="btn btn--ink" type="submit">저장</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="modal" id="postpone-modal">
+      <form method="dialog" class="modal__form" id="postpone-form">
+        <h2>종료일 재설정하기</h2>
+        <p class="modal__hint" id="postpone-hint"></p>
+        <fieldset class="date-fields">
+          <legend>새 종료일</legend>
+          <label>
+            년도
+            <input name="year" type="number" min="2000" max="2100" required />
+          </label>
+          <label>
+            월
+            <input name="month" type="number" min="1" max="12" required />
+          </label>
+          <label>
+            일
+            <input name="day" type="number" min="1" max="31" required />
+          </label>
+          <label>
+            시간
+            <input name="time" type="time" required />
+          </label>
+        </fieldset>
+        <div class="modal__actions">
+          <button class="btn btn--ghost" type="button" value="cancel" id="postpone-cancel">
+            닫기
+          </button>
+          <button class="btn btn--ink" type="submit">미루기</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="app.js"></script>
+  </body>
+</html>
