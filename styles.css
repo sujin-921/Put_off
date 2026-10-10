@@ -731,3 +731,15 @@ main[data-auth="out"] .history {
     margin-top: 10px;
   }
 }
+
+/* 광고 영역: 로그인 후(또는 로컬 모드)에만 보여요 */
+.ad {
+  display: none;
+  margin-top: 24px;
+  overflow: hidden;
+}
+
+main[data-auth="in"] .ad,
+main[data-auth="local"] .ad {
+  display: block;
+}

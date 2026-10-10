@@ -69,6 +69,21 @@ function syncError(error) {
 // 화면 모드: loading(확인 중) / out(로그아웃) / in(로그인) / local(Firebase 없이 이 화면에서만 사용)
 function setAuthMode(mode) {
   els.main.dataset.auth = mode;
+  // 광고는 화면에 보이는 상태(로그인 후)에서 한 번만 요청해요
+  if (mode === "in" || mode === "local") requestAnimationFrame(loadAd);
+}
+
+let adRequested = false;
+
+function loadAd() {
+  const slot = document.querySelector(".adsbygoogle");
+  if (adRequested || !slot || !slot.offsetWidth) return;
+  adRequested = true;
+  try {
+    (window.adsbygoogle = window.adsbygoogle || []).push({});
+  } catch {
+    /* 광고를 불러오지 못해도 앱 사용에는 영향이 없어요 */
+  }
 }
 
 function initFirebase() {
