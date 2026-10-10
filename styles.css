@@ -737,6 +737,28 @@ main[data-auth="out"] .history {
   display: none;
   margin-top: 24px;
   overflow: hidden;
+  text-align: center;
+}
+
+/* 광고 크기: 화면 폭에 따라 정해진 크기를 써요 (모바일 320x100 / 중간 468x60 / 큰 화면 728x90) */
+.ad-slot {
+  display: inline-block;
+  width: 320px;
+  height: 100px;
+}
+
+@media (min-width: 500px) {
+  .ad-slot {
+    width: 468px;
+    height: 60px;
+  }
+}
+
+@media (min-width: 800px) {
+  .ad-slot {
+    width: 728px;
+    height: 90px;
+  }
 }
 
 main[data-auth="in"] .ad,
