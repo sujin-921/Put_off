@@ -7,6 +7,11 @@ const els = {
   todayEmpty: document.getElementById("today-empty"),
   addBtn: document.getElementById("add-todo-btn"),
   syncStatus: document.getElementById("sync-status"),
+  main: document.querySelector("main.page"),
+  loginBtn: document.getElementById("login-btn"),
+  loginError: document.getElementById("login-error"),
+  logoutBtn: document.getElementById("logout-btn"),
+  userName: document.getElementById("user-name"),
   addTitle: document.getElementById("add-modal-title"),
   addModal: document.getElementById("add-modal"),
   addForm: document.getElementById("add-form"),
@@ -43,7 +48,7 @@ const state = {
   filter: "all",
 };
 
-// ---- Firebase Realtime Database 연동 (할 일은 "todos/<id>" 경로에 저장) ----
+// ---- Firebase 로그인 + Realtime Database 연동 (할 일은 "todos/<내 uid>/<id>" 경로에 저장) ----
 const db = { ref: null };
 
 function setSyncStatus(message) {
@@ -61,28 +66,82 @@ function syncError(error) {
   );
 }
 
+// 화면 모드: loading(확인 중) / out(로그아웃) / in(로그인) / local(Firebase 없이 이 화면에서만 사용)
+function setAuthMode(mode) {
+  els.main.dataset.auth = mode;
+}
+
 function initFirebase() {
-  if (typeof firebase === "undefined" || typeof firebaseConfig === "undefined") {
+  if (
+    typeof firebase === "undefined" ||
+    typeof firebaseConfig === "undefined" ||
+    typeof firebase.auth !== "function"
+  ) {
+    setAuthMode("local");
     setSyncStatus("Firebase에 연결되지 않았어요. 지금 추가한 할 일은 새로고침하면 사라져요.");
     return;
   }
   try {
     firebase.initializeApp(firebaseConfig);
-    db.ref = firebase.database().ref("todos");
-    // 저장된 할 일을 불러오고, 데이터가 바뀔 때마다 화면을 갱신해요
-    db.ref.on(
-      "value",
-      (snapshot) => {
-        state.todos = Object.entries(snapshot.val() || {})
-          .map(([id, record]) => fromRecord(id, record))
-          .filter(Boolean);
-        render();
-      },
-      syncError
-    );
+    firebase.auth().onAuthStateChanged(handleAuthChange, syncError);
   } catch (error) {
+    setAuthMode("local");
     syncError(error);
   }
+}
+
+function detachTodos() {
+  if (db.ref) db.ref.off();
+  db.ref = null;
+}
+
+function handleAuthChange(user) {
+  detachTodos();
+  if (!user) {
+    state.todos = [];
+    [els.dayModal, els.addModal, els.postponeModal].forEach((modal) => {
+      if (modal.open) modal.close();
+    });
+    setAuthMode("out");
+    render();
+    return;
+  }
+
+  els.userName.textContent = user.displayName || user.email || "내 계정";
+  els.loginError.hidden = true;
+  setSyncStatus("");
+  setAuthMode("in");
+
+  // 내 계정(uid) 아래의 할 일만 불러오고, 바뀔 때마다 화면을 갱신해요
+  db.ref = firebase.database().ref("todos/" + user.uid);
+  db.ref.on(
+    "value",
+    (snapshot) => {
+      state.todos = Object.entries(snapshot.val() || {})
+        .map(([id, record]) => fromRecord(id, record))
+        .filter(Boolean);
+      render();
+    },
+    syncError
+  );
+}
+
+const loginMessages = {
+  "auth/operation-not-supported-in-this-environment":
+    "이 주소에서는 로그인할 수 없어요. 파일을 직접 연 경우라면 http://localhost 또는 https 주소로 열어 주세요 (예: Live Server).",
+  "auth/unauthorized-domain":
+    "이 주소가 Firebase 승인된 도메인에 없어요. Firebase 콘솔 > Authentication > 설정 > 승인된 도메인에 추가해 주세요.",
+  "auth/operation-not-allowed":
+    "Google 로그인이 꺼져 있어요. Firebase 콘솔 > Authentication > 로그인 방법에서 Google을 사용 설정해 주세요.",
+  "auth/popup-blocked": "로그인 팝업이 차단됐어요. 팝업을 허용하고 다시 눌러 주세요.",
+};
+
+function showLoginError(error) {
+  const code = error && error.code;
+  if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") return;
+  els.loginError.textContent =
+    loginMessages[code] || `로그인하지 못했어요. 다시 시도해 주세요. (${code || "알 수 없는 오류"})`;
+  els.loginError.hidden = false;
 }
 
 // Firebase에는 { Title, detail, date, done } 형태로 목록(todos)에 저장해요
@@ -643,6 +702,18 @@ els.todayBtn.addEventListener("click", () => {
   state.cursor = startOfDay(new Date());
   state.selected = startOfDay(new Date());
   render();
+});
+
+els.loginBtn.addEventListener("click", () => {
+  els.loginError.hidden = true;
+  firebase
+    .auth()
+    .signInWithPopup(new firebase.auth.GoogleAuthProvider())
+    .catch(showLoginError);
+});
+
+els.logoutBtn.addEventListener("click", () => {
+  firebase.auth().signOut().catch(syncError);
 });
 
 initFirebase();

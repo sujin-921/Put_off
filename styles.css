@@ -101,7 +101,8 @@ h3 {
 
 .today,
 .calendar,
-.history {
+.history,
+.login {
   border: 1px solid var(--line-soft);
   border-radius: var(--radius-lg);
   padding: 22px 22px 12px;
@@ -664,5 +665,69 @@ h3 {
 
   .week__todos .chip__time {
     display: inline;
+  }
+}
+
+/* 로그인 화면 / 사용자 표시줄 */
+.masthead {
+  position: relative;
+}
+
+.userbar {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  position: absolute;
+  right: 0;
+  top: 2px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.login {
+  display: none;
+  text-align: center;
+  padding: 36px 22px 32px;
+}
+
+.login h2 {
+  margin: 0 0 8px;
+  font-size: 23px;
+}
+
+.login__text {
+  margin: 0 0 18px;
+  color: var(--ink-soft);
+}
+
+.login__error {
+  margin: 16px auto 0;
+  max-width: 480px;
+  color: #7a2e26;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+main[data-auth="in"] .userbar {
+  display: flex;
+}
+
+main[data-auth="out"] .login {
+  display: block;
+}
+
+main[data-auth="loading"] .today,
+main[data-auth="loading"] .calendar,
+main[data-auth="loading"] .history,
+main[data-auth="out"] .today,
+main[data-auth="out"] .calendar,
+main[data-auth="out"] .history {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .userbar {
+    position: static;
+    margin-top: 10px;
   }
 }

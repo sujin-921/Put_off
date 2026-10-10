@@ -14,12 +14,23 @@
   </head>
   <body>
     <div class="paper" aria-hidden="true"></div>
-    <main class="page">
+    <main class="page" data-auth="loading">
       <header class="masthead">
         <p class="masthead__mark">TO-DO</p>
         <h1>할 일 노트</h1>
+        <div class="userbar" id="userbar">
+          <span class="userbar__name" id="user-name"></span>
+          <button class="btn btn--small" type="button" id="logout-btn">로그아웃</button>
+        </div>
         <p class="sync-status" id="sync-status" role="status" hidden></p>
       </header>
+
+      <section class="login" aria-labelledby="login-heading">
+        <h2 id="login-heading">로그인</h2>
+        <p class="login__text">로그인하면 내 할 일이 내 계정에 저장돼요.</p>
+        <button class="btn btn--ink" type="button" id="login-btn">Google로 로그인</button>
+        <p class="login__error" id="login-error" role="alert" hidden></p>
+      </section>
 
       <section class="today" aria-labelledby="today-heading">
         <div class="today__head">
@@ -164,6 +175,7 @@
 
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="firebase-config.js"></script>
     <script src="app.js"></script>
   </body>
