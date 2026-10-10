@@ -6,11 +6,13 @@ const els = {
   todayList: document.getElementById("today-list"),
   todayEmpty: document.getElementById("today-empty"),
   addBtn: document.getElementById("add-todo-btn"),
+  syncStatus: document.getElementById("sync-status"),
   addTitle: document.getElementById("add-modal-title"),
   addModal: document.getElementById("add-modal"),
   addForm: document.getElementById("add-form"),
   addCancel: document.getElementById("add-cancel"),
   addDelete: document.getElementById("add-delete"),
+  addUndo: document.getElementById("add-undo"),
   postponeModal: document.getElementById("postpone-modal"),
   postponeForm: document.getElementById("postpone-form"),
   postponeCancel: document.getElementById("postpone-cancel"),
@@ -32,7 +34,7 @@ const els = {
 };
 
 const state = {
-  todos: [], // 브라우저 저장소를 쓰지 않아서, 새로고침하면 목록이 초기화돼요
+  todos: [], // Firebase에서 불러온 할 일 목록 (연결이 없으면 새로고침 시 사라져요)
   view: "month",
   cursor: startOfDay(new Date()),
   selected: startOfDay(new Date()),
@@ -40,6 +42,87 @@ const state = {
   editId: null,
   filter: "all",
 };
+
+// ---- Firebase Realtime Database 연동 (할 일은 "todos/<id>" 경로에 저장) ----
+const db = { ref: null };
+
+function setSyncStatus(message) {
+  els.syncStatus.textContent = message || "";
+  els.syncStatus.hidden = !message;
+}
+
+function syncError(error) {
+  const denied =
+    error && (error.code === "PERMISSION_DENIED" || /permission_denied/i.test(error.message || ""));
+  setSyncStatus(
+    denied
+      ? "Firebase 데이터베이스 규칙 때문에 읽기·쓰기가 막혀 있어요. 규칙을 확인해 주세요."
+      : "Firebase와 통신하지 못했어요. 인터넷 연결과 설정을 확인해 주세요."
+  );
+}
+
+function initFirebase() {
+  if (typeof firebase === "undefined" || typeof firebaseConfig === "undefined") {
+    setSyncStatus("Firebase에 연결되지 않았어요. 지금 추가한 할 일은 새로고침하면 사라져요.");
+    return;
+  }
+  try {
+    firebase.initializeApp(firebaseConfig);
+    db.ref = firebase.database().ref("todos");
+    // 저장된 할 일을 불러오고, 데이터가 바뀔 때마다 화면을 갱신해요
+    db.ref.on(
+      "value",
+      (snapshot) => {
+        state.todos = Object.entries(snapshot.val() || {})
+          .map(([id, record]) => fromRecord(id, record))
+          .filter(Boolean);
+        render();
+      },
+      syncError
+    );
+  } catch (error) {
+    syncError(error);
+  }
+}
+
+// Firebase에는 { Title, detail, date, done } 형태로 목록(todos)에 저장해요
+function toRecord(todo) {
+  return { Title: todo.title, detail: todo.detail || "", date: todo.due, done: !!todo.done };
+}
+
+function fromRecord(id, record) {
+  if (!record || Number.isNaN(new Date(record.date).getTime())) return null;
+  return {
+    id,
+    title: record.Title || "",
+    detail: record.detail || "",
+    due: record.date,
+    done: !!record.done,
+  };
+}
+
+// 새 할 일의 id: Firebase 목록 키(push key)를 쓰고, 연결이 없으면 임의 id
+function newTodoId() {
+  return db.ref ? db.ref.push().key : crypto.randomUUID();
+}
+
+function persist(todo) {
+  if (!db.ref) return;
+  db.ref
+    .child(todo.id)
+    .set(toRecord(todo))
+    .then(() => setSyncStatus(""))
+    .catch(syncError);
+}
+
+function unpersist(id) {
+  if (!db.ref) return;
+  db.ref
+    .child(id)
+    .remove()
+    .then(() => setSyncStatus(""))
+    .catch(syncError);
+}
 
 function startOfDay(date) {
   const d = new Date(date);
@@ -213,6 +296,7 @@ function openAddModal() {
   state.editId = null;
   els.addTitle.textContent = "할 일 추가하기";
   els.addDelete.hidden = true;
+  els.addUndo.hidden = true;
   resetDeleteButton();
   els.addForm.reset();
   fillDateFields(els.addForm, new Date());
@@ -224,6 +308,7 @@ function openEdit(todo) {
   state.editId = todo.id;
   els.addTitle.textContent = "할 일 수정하기";
   els.addDelete.hidden = false;
+  els.addUndo.hidden = !todo.done; // 완료한 할 일을 열었을 때만 표시
   resetDeleteButton();
   els.addForm.reset();
   els.addForm.title.value = todo.title;
@@ -246,6 +331,16 @@ function completeTodo(id) {
   const todo = state.todos.find((t) => t.id === id);
   if (!todo) return;
   todo.done = true;
+  persist(todo);
+  render();
+}
+
+// 완료했던 할 일을 다시 미완료로 되돌리기
+function uncompleteTodo(id) {
+  const todo = state.todos.find((t) => t.id === id);
+  if (!todo) return;
+  todo.done = false;
+  persist(todo);
   render();
 }
 
@@ -444,6 +539,12 @@ els.addModal.addEventListener("close", () => {
   resetDeleteButton();
 });
 
+els.addUndo.addEventListener("click", () => {
+  if (!state.editId) return;
+  uncompleteTodo(state.editId);
+  els.addModal.close();
+});
+
 els.addDelete.addEventListener("click", () => {
   if (!state.editId) return;
   if (!els.addDelete.classList.contains("is-armed")) {
@@ -452,7 +553,9 @@ els.addDelete.addEventListener("click", () => {
     deleteTimer = setTimeout(resetDeleteButton, 3000);
     return;
   }
-  state.todos = state.todos.filter((t) => t.id !== state.editId);
+  const removedId = state.editId;
+  state.todos = state.todos.filter((t) => t.id !== removedId);
+  unpersist(removedId);
   els.addModal.close();
   render();
 });
@@ -483,14 +586,17 @@ els.addForm.addEventListener("submit", (event) => {
       editing.title = title;
       editing.detail = detail;
       editing.due = due.toISOString();
+      persist(editing);
     } else {
-      state.todos.push({
-        id: crypto.randomUUID(),
+      const todo = {
+        id: newTodoId(),
         title,
         detail,
         due: due.toISOString(),
         done: false,
-      });
+      };
+      state.todos.push(todo);
+      persist(todo); // 새 할 일을 Firebase에 저장
     }
     if (!els.dayModal.open) {
       state.selected = startOfDay(due);
@@ -511,6 +617,7 @@ els.postponeForm.addEventListener("submit", (event) => {
   try {
     const due = readDateFromForm(els.postponeForm);
     todo.due = due.toISOString();
+    persist(todo);
     if (!els.dayModal.open) {
       state.selected = startOfDay(due);
       state.cursor = startOfDay(due);
@@ -538,4 +645,5 @@ els.todayBtn.addEventListener("click", () => {
   render();
 });
 
+initFirebase();
 render();

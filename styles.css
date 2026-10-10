@@ -89,6 +89,16 @@ h3 {
   font-size: 34px;
 }
 
+.sync-status {
+  margin: 12px 0 0;
+  padding: 9px 14px;
+  border: 1px solid rgba(155, 61, 51, 0.4);
+  border-radius: var(--radius-sm);
+  background: rgba(155, 61, 51, 0.08);
+  color: #7a2e26;
+  font-size: 13px;
+}
+
 .today,
 .calendar,
 .history {
@@ -154,7 +164,6 @@ h3 {
 }
 
 .btn--danger {
-  margin-right: auto;
   border-color: #9b3d33;
   color: #9b3d33;
 }
@@ -567,8 +576,15 @@ h3 {
 
 .modal__actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
+}
+
+.modal__actions-left {
+  display: flex;
+  gap: 8px;
+  margin-right: auto;
 }
 
 @media (max-width: 720px) {
